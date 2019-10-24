@@ -1,0 +1,8 @@
+{
+  "name": "com.passivepicasso.visualtemplates",
+  "version": "0.1.0",
+  "displayName": "VisualTemplates",
+  "description": "An automated templating system for UIElements to improve UI development speed with the aid of tools like UIBuilder",
+  "unity": "2020.1",
+  "release": "0a8",
+}
