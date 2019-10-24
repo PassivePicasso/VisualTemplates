@@ -1,0 +1,11 @@
+#translation {
+    flex-direction: row;
+}
+
+#translation TemplateContainer {
+    flex-grow: 1;
+}
+
+#translation Label {
+    -unity-text-align: middle-left;
+}

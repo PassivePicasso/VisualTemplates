@@ -1,0 +1,11 @@
+#Int4x3 > VisualElement {
+    flex-direction: row;
+}
+
+#Int4x3 > VisualElement > TemplateContainer {
+    flex-grow: 1;
+}
+
+#Int4x3 > VisualElement > Label {
+    -unity-text-align: middle-left;
+}

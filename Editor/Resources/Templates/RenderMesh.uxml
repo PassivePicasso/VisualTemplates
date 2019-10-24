@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Label text="Render Mesh" class="span header">
+        <Style src="RenderMesh.uss" />
+    </ui:Label>
+    <ui:Foldout value="false">
+        <Style src="RenderMesh.uss" />
+        <ui:VisualElement>
+            <uie:PropertyField binding-path="mesh" label="Mesh" />
+            <uie:PropertyField binding-path="material" label="Material" />
+            <uie:PropertyField binding-path="subMesh" label="SubMesh" />
+            <uie:PropertyField binding-path="layer" label="Layer" />
+            <uie:PropertyField binding-path="castShadows" label="Cast Shadows" />
+            <uie:PropertyField binding-path="receiveShadows" label="Receive Shadows" />
+        </ui:VisualElement>
+    </ui:Foldout>
+</ui:UXML>

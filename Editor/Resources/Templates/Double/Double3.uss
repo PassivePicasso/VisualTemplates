@@ -1,0 +1,11 @@
+#Double3Field {
+    flex-direction: row;
+}
+
+.unity-base-field__label {
+    min-width: 0;
+}
+
+#Double3Field > DoubleField {
+    flex-grow: 1;
+}

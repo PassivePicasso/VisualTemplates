@@ -1,0 +1,11 @@
+#Float2Field {
+    flex-direction: row;
+}
+
+.unity-base-field__label {
+    min-width: 0;
+}
+
+#Float2Field > FloatField {
+    flex-grow: 1;
+}

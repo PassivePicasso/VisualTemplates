@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="Double2Field">
+        <Style src="Double2.uss" />
+        <uie:DoubleField label="X" value="0" binding-path="x" />
+        <uie:DoubleField label="Y" value="0" binding-path="y" />
+    </ui:VisualElement>
+</ui:UXML>

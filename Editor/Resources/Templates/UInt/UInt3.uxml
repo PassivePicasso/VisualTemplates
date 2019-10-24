@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="UInt3Field">
+        <Style src="UInt3.uss" />
+        <uie:IntegerField label="X" value="0" binding-path="x" />
+        <uie:IntegerField label="Y" value="0" binding-path="y" />
+        <uie:IntegerField label="Z" value="0" binding-path="z" />
+    </ui:VisualElement>
+</ui:UXML>

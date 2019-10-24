@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="Double4Field">
+        <Style src="Double4.uss" />
+        <uie:DoubleField label="X" value="0" binding-path="x" />
+        <uie:DoubleField label="Y" value="0" binding-path="y" />
+        <uie:DoubleField label="Z" value="0" binding-path="z" />
+        <uie:DoubleField label="W" value="0" binding-path="w" />
+    </ui:VisualElement>
+</ui:UXML>

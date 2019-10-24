@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Template name="Int4" src="Int4.uxml" />
+    <ui:VisualElement name="Int4x2">
+        <Style src="Int4x2.uss" />
+        <ui:VisualElement>
+            <ui:Label text="C0" />
+            <ui:Instance template="Int4" binding-path="c0"/>
+        </ui:VisualElement>
+        <ui:VisualElement>
+            <ui:Label text="C1" />
+            <ui:Instance template="Int4" binding-path="c1"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

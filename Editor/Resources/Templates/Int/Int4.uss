@@ -1,0 +1,11 @@
+#Int4Field {
+    flex-direction: row;
+}
+
+.unity-base-field__label {
+    min-width: 0;
+}
+
+#Int4Field > IntegerField {
+    flex-grow: 1;
+}

@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Template name="Float4" src="Float4.uxml" />
+    <ui:VisualElement name="Float4x4">
+        <Style src="Float4x4.uss" />
+        <ui:VisualElement>
+            <ui:Label text="C0" />
+            <ui:Instance template="Float4" binding-path="c0"/>
+        </ui:VisualElement>
+        <ui:VisualElement>
+            <ui:Label text="C1" />
+            <ui:Instance template="Float4" binding-path="c1"/>
+        </ui:VisualElement>
+        <ui:VisualElement>
+            <ui:Label text="C2" />
+            <ui:Instance template="Float4" binding-path="c2"/>
+        </ui:VisualElement>
+        <ui:VisualElement>
+            <ui:Label text="C3" />
+            <ui:Instance template="Float4" binding-path="c3"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,11 @@
+#UInt3x3 > VisualElement {
+    flex-direction: row;
+}
+
+#UInt3x3 > VisualElement > TemplateContainer {
+    flex-grow: 1;
+}
+
+#UInt3x3 > VisualElement > Label {
+    -unity-text-align: middle-left;
+}

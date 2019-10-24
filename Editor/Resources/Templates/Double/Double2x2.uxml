@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Template name="Double2" src="Double2.uxml" />
+    <ui:VisualElement name="Double2x2">
+        <Style src="Double2x2.uss" />
+        <ui:VisualElement>
+            <ui:Label text="C0" />
+            <ui:Instance template="Double2" binding-path="c0"/>
+        </ui:VisualElement>
+        <ui:VisualElement>
+            <ui:Label text="C1" />
+            <ui:Instance template="Double2" binding-path="c1"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
