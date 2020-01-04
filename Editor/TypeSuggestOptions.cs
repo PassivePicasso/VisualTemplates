@@ -14,16 +14,17 @@ namespace VisualTemplates
         private static Dictionary<string, IEnumerable<SuggestOption>> descendantIncludedLookup = new Dictionary<string, IEnumerable<SuggestOption>>();
 
         public override IEnumerable<SuggestOption> Options { get; protected set; }
+        public new class UxmlFactory : UxmlFactory<TypeSuggestOptions, UxmlTraits> { }
 
-        public new class UxmlFactory : UxmlFactory<TypeSuggestOptions, UxmlTraits>
+        public new class UxmlTraits : SuggestOptions.UxmlTraits
         {
             UxmlStringAttributeDescription m_types = new UxmlStringAttributeDescription { name = "types", use = UxmlAttributeDescription.Use.Required };
             UxmlBoolAttributeDescription m_descendants = new UxmlBoolAttributeDescription { name = "include-descendants" };
 
-            public override VisualElement Create(IUxmlAttributes bag, CreationContext cc)
+            public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
             {
                 Profiler.BeginSample("CreateTypeSuggestOption");
-                var suggestOption = (TypeSuggestOptions)base.Create(bag, cc);
+                base.Init(ve, bag, cc);
 
                 string typeString = m_types.GetValueFromBag(bag, cc);
                 bool includeDescendants = m_descendants.GetValueFromBag(bag, cc);
@@ -49,12 +50,18 @@ namespace VisualTemplates
                             .Select(at => new SuggestOption { Name = at.Name, data = at })
                             .ToArray();
                 }
-                suggestOption.Options = includeDescendants ? descendantIncludedLookup[typeString] : rootOnlyLookup[typeString];
+
+                ((TypeSuggestOptions)ve).Options = includeDescendants ? descendantIncludedLookup[typeString] : rootOnlyLookup[typeString];
 
                 Profiler.EndSample();
-
-                return suggestOption;
             }
+
+
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
+            {
+                get { yield break; }
+            }
+
         }
     }
 }

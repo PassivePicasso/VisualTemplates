@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.UIElements;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace VisualTemplates
 {
-    public class ItemsControl : BindableElement
+    public class ItemsControl : BindableElement, INotifyValueChanged<string>
     {
         static readonly Type[] methodSignature = new[] { typeof(VisualElement) };
 
@@ -17,17 +19,78 @@ namespace VisualTemplates
         SerializedProperty boundArray;
         private int lastArraySize;
 
-        private string configMethodName;
+        [SerializeField]
+        private string _configMethodName;
+        public string configMethodName
+        {
+            get { return ((INotifyValueChanged<string>)this).value; }
+            set
+            {
+                ((INotifyValueChanged<string>)this).value = value;
+            }
+        }
+
         public Func<SerializedProperty, bool> makeItem;
         MethodInfo configMethod;
-        Editor editor;
+        AutoTemplate templateRoot;
+
+        string INotifyValueChanged<string>.value
+        {
+            get
+            {
+                return _configMethodName ?? String.Empty;
+            }
+
+            set
+            {
+                if (_configMethodName != value)
+                {
+                    if (panel != null)
+                    {
+                        using (ChangeEvent<string> evt = ChangeEvent<string>.GetPooled(this._configMethodName, value))
+                        {
+                            evt.target = this;
+                            ((INotifyValueChanged<string>)this).SetValueWithoutNotify(value);
+                            SendEvent(evt);
+                        }
+                    }
+                    else
+                    {
+                        ((INotifyValueChanged<string>)this).SetValueWithoutNotify(value);
+                    }
+                }
+            }
+        }
+
+        public void SetValueWithoutNotify(string newValue)
+        {
+            _configMethodName = newValue;
+        }
 
         public ItemsControl()
         {
+            name = $"content-presenter";
+            RegisterCallback<AttachToPanelEvent>(OnAttached);
         }
 
-        private void Reset(SerializedObject boundObject)
+        private void OnAttached(AttachToPanelEvent evt)
         {
+            if (templateRoot == null)
+                templateRoot = this.Parents().OfType<AutoTemplate>().FirstOrDefault();
+
+            if (templateRoot == null)
+            {
+                Debug.LogError("Could not find ancestor AutoTemplate in VisualTree");
+            }
+            else
+            {
+                Reset();
+            }
+        }
+
+        private void Reset()
+        {
+            if (boundObject == null || templateRoot == null) return;
             Clear();
 
             boundArray = GetArray(boundObject);
@@ -36,31 +99,52 @@ namespace VisualTemplates
             var property = boundArray.Copy();
             property.NextVisible(true);
             var arraySize = property.Copy();
+            
+            if (!string.IsNullOrEmpty(_configMethodName)
+             && configMethod == null
+             && templateRoot?.editor != null)
+                configMethod = templateRoot.editor.GetType().GetMethod(_configMethodName, methodSignature);
 
-            if (!string.IsNullOrEmpty(configMethodName))
+            while (property.NextVisible(false))
             {
-                if (editor == null)
-                    editor = this.Parents().OfType<AutoTemplate>().First().editorHost;
-                if (configMethod == null)
-                {
-                    configMethod = editor.GetType().GetMethod(configMethodName, methodSignature);
-                }
+                VisualElement child = MakeItem(boundObject, property);
+                Add(child);
+                child.Bind(boundObject);
+
+                if (childCount >= arraySize.intValue)
+                    break;
+            }
+        }
+
+        private VisualElement MakeItem(SerializedObject boundObject, SerializedProperty property)
+        {
+            var itemContainer = new VisualElement();
+            itemContainer.name = $"items-control-item-{childCount}";
+            itemContainer.AddToClassList("items-control-item");
+
+            ContentPresenter contentPresenter = new ContentPresenter { bindingPath = property.propertyPath };
+
+            void DeleteItem()
+            {
+                int index = IndexOf(itemContainer);
+                boundArray.DeleteArrayElementAtIndex(index);
+                itemContainer.RemoveFromHierarchy();
+                boundObject.ApplyModifiedProperties();
             }
 
-            int i = 0;
-            do
+            itemContainer.Add(contentPresenter);
+
+            itemContainer.Add(new Button
             {
-                var itemResult = MakeItem(property);
+                text = "X",
+                clickable = new Clickable(DeleteItem),
+                name = "items-control-item-delete"
+            });
 
-                if (itemResult.terminate)
-                    break;
+            methodDataArray[0] = contentPresenter;
+            configMethod?.Invoke(templateRoot.editor, methodDataArray);
 
-                if (itemResult.madeItem && childCount >= arraySize.intValue)
-                    break;
-
-            } while (property.NextVisible(false));
-
-            lastArraySize = arraySize.intValue;
+            return itemContainer;
         }
 
         private SerializedProperty GetArray(SerializedObject boundObject)
@@ -86,75 +170,11 @@ namespace VisualTemplates
 
             boundArray.serializedObject.ApplyModifiedProperties();
 
-            MakeItem(cdsp, true);
-        }
+            var item = MakeItem(boundArray.serializedObject, cdsp);
 
-        (bool madeItem, bool terminate) MakeItem(SerializedProperty property, bool bind = false)
-        {
-            var dataType = property.type;
+            Add(item);
 
-            if (dataType.StartsWith("managedReference"))
-            {
-                dataType = property.managedReferenceFullTypename;
-                dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
-            }
-            if (dataType == "ArraySize")
-                if (property.intValue == 0)
-                    return (false, true);
-                else return (false, false);
-
-            if (dataType == null)
-                return (false, true);
-
-            var visualTreeAsset = VisualTemplateSettings.TemplateLoader.Invoke(dataType);
-
-            var itemContainer = new VisualElement();
-            itemContainer.name = $"items-control-item-{childCount}";
-            itemContainer.AddToClassList("items-control-item");
-
-            void DeleteItem()
-            {
-                int index = IndexOf(itemContainer);
-                boundArray.DeleteArrayElementAtIndex(index);
-                itemContainer.RemoveFromHierarchy();
-                boundObject.ApplyModifiedProperties();
-            }
-
-            var propertyPath = property.propertyPath;
-            if (visualTreeAsset == null)
-            {
-                //in order to maintain our index we must add a visual element even if we don't find a template for the item.
-                Label error = new Label($"Template file not found: {dataType}.uxml");
-                error.AddToClassList("template-error");
-
-                itemContainer.Add(error);
-                itemContainer.Add(new PropertyField { bindingPath = $"{propertyPath}" });
-            }
-            else
-            {
-                var templateContainer = visualTreeAsset.Instantiate();
-
-                templateContainer.bindingPath = $"{propertyPath}";
-                methodDataArray[0] = templateContainer;
-                configMethod?.Invoke(editor, methodDataArray);
-
-                itemContainer.Add(templateContainer);
-            }
-
-            itemContainer.Add(new Button
-            {
-                text = "X",
-                clickable = new Clickable(DeleteItem),
-                name = "items-control-item-delete"
-            });
-
-            Add(itemContainer);
-
-            if (bind)
-                itemContainer.Bind(boundObject);
-
-            return (true, false);
-
+            item.Bind(boundObject);
         }
 
         protected override void ExecuteDefaultActionAtTarget(EventBase evt)
@@ -168,24 +188,28 @@ namespace VisualTemplates
             if (boundObject == null)
             {
                 boundObject = bindObjectProperty.GetValue(evt) as SerializedObject;
-                Reset(boundObject);
+                Reset();
             }
         }
 
-        public new class UxmlFactory : UxmlFactory<ItemsControl, UxmlTraits>
+        public new class UxmlFactory : UxmlFactory<ItemsControl, UxmlTraits> { }
+        public new class UxmlTraits : BindableElement.UxmlTraits
         {
             UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
 
-            public override VisualElement Create(IUxmlAttributes bag, CreationContext cc)
+            public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
             {
-                var itemsControl = (ItemsControl)base.Create(bag, cc);
+                base.Init(ve, bag, cc);
+
+                var itemsControl = (ItemsControl)ve;
 
                 itemsControl.configMethodName = m_configMethod.GetValueFromBag(bag, cc);
+            }
 
-                return itemsControl;
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
+            {
+                get { yield break; }
             }
         }
-
-        public new class UxmlTraits : BindableElement.UxmlTraits { }
     }
 }
