@@ -9,6 +9,6 @@ namespace VisualTemplates
 {
     public abstract class SuggestOptions : VisualElement
     {
-        public abstract IEnumerable<SuggestOption> Options { get; protected set; }
+        public abstract IEnumerable<SuggestOption> Options { get; }
     }
 }

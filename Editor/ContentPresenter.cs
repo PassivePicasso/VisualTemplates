@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
@@ -10,77 +11,84 @@ namespace VisualTemplates
 {
     public class ContentPresenter : BindableElement
     {
-        static readonly Type[] methodSignature = new[] { typeof(VisualElement) };
+        private static readonly Type[] methodSignature = new[] { typeof(VisualElement) };
+        private static readonly object[] methodDataArray = new object[1];
+        private SerializedObject boundObject;
+        private SerializedProperty boundProperty;
 
-        static readonly object[] methodDataArray = new object[1];
+        public string ConfigMethod { get; set; }
 
-        SerializedObject boundObject;
-        SerializedProperty boundProperty;
-
-        private string configMethodName;
-        public Func<SerializedProperty, bool> makeItem;
-        MethodInfo configMethod;
-        AutoTemplate templateRoot;
-        VisualTreeAsset visualTreeAsset;
-
-        public string DataType { get; private set; }
+        private MethodInfo configMethod;
+        private VisualTreeAsset visualTreeAsset;
+        private AutoEditor editor;
 
         public ContentPresenter()
         {
             name = $"content-presenter";
             RegisterCallback<AttachToPanelEvent>(OnAttached);
         }
-
-        private void OnAttached(AttachToPanelEvent evt)
-        {
-            if (templateRoot == null)
-                templateRoot = this.Parents().OfType<AutoTemplate>().FirstOrDefault();
-
-            if (templateRoot == null)
-            {
-                Debug.LogError("Could not find ancestor AutoTemplate in VisualTree");
-            }
-            else
-            {
-                Reset();
-            }
-        }
-
+        private void OnAttached(AttachToPanelEvent evt) => Reset();
 
         private void Reset()
         {
-            if (boundObject == null || templateRoot == null) return;
+            if (boundObject == null) return;
             Clear();
 
+            editor = (userData ?? FindAncestorUserData()) as AutoEditor;
+            if (editor != null && !string.IsNullOrEmpty(ConfigMethod) && configMethod == null)
+                configMethod = editor.GetType().GetMethod(ConfigMethod, methodSignature);
+
+            if (editor == null) return;
+
+            string dataType = boundObject.targetObject.GetType().Name;
             boundProperty = GetProperty(boundObject);
-            if (boundProperty == null) return;
 
-            var property = boundProperty.Copy();
-
-            if (!string.IsNullOrEmpty(configMethodName))
+            if (boundProperty == null) visualTreeAsset = editor.LoadAsset(dataType);
+            else
             {
-                if (templateRoot?.editor != null)
-                    if (configMethod == null)
-                        configMethod = templateRoot.editor.GetType().GetMethod(configMethodName, methodSignature);
+                var property = boundProperty.Copy();
+
+                dataType = property.type.Substring(property.type.IndexOf(" ") + 1);
+                if (dataType?.StartsWith("managedReference") ?? false)
+                {
+                    var mrft = property.managedReferenceFullTypename;
+                    var assemblyName = mrft.Substring(0, mrft.IndexOf(" "));
+                    dataType = mrft.Substring(mrft.IndexOf(" ") + 1);
+
+                    var asm = AppDomain.CurrentDomain.GetAssemblies().SingleOrDefault(assembly => assembly.GetName().Name == assemblyName);
+                    var type = asm.GetType(dataType, false, true);
+                    var parentType = type;
+
+                    //Debug.Log($"type: {type?.Name}");
+                    VisualTreeAsset treeAsset = null;
+                    while (treeAsset == null)
+                    {
+                        treeAsset = editor.LoadAsset(parentType.Name);
+                        if (treeAsset == null)
+                        {
+                            if (parentType.BaseType == null) break;
+                            if (parentType.BaseType == typeof(object)) break;
+
+                            parentType = parentType.BaseType;
+                        }
+                    }
+                    if (treeAsset != null)
+                    {
+                        dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
+                        visualTreeAsset = editor.LoadAsset(dataType);
+                    }
+                }
+                else
+                {
+                    if (dataType == null)
+                        return;
+
+                    dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
+
+                    visualTreeAsset = editor.LoadAsset(dataType);
+                }
             }
 
-            if (templateRoot == null) return;
-
-            var dataType = property.type;
-
-            if (dataType?.StartsWith("managedReference") ?? false)
-            {
-                dataType = property.managedReferenceFullTypename;
-                dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
-            }
-
-            if (dataType == null)
-                return;
-
-            if (DataType != dataType)
-                visualTreeAsset = templateRoot.AssetLoader.Invoke(dataType);
-
-            var propertyPath = property.propertyPath;
             if (visualTreeAsset == null)
             {
                 //in order to maintain our index we must add a visual element even if we don't find a template for the item.
@@ -95,13 +103,14 @@ namespace VisualTemplates
 
             methodDataArray[0] = this;
 
-            configMethod?.Invoke(templateRoot.editor, methodDataArray);
-
-            this.Bind(boundObject);
+            configMethod?.Invoke(editor, methodDataArray);
+            if (typeof(UnityEngine.Object).IsAssignableFrom(boundObject.targetObject.GetType()))
+                this.Bind(boundObject);
         }
 
         private SerializedProperty GetProperty(SerializedObject boundObject)
         {
+            if (bindingPath == null) return boundObject.FindProperty("");
             var property = boundObject.FindProperty(bindingPath);
             if (property == null)
             {
@@ -124,20 +133,25 @@ namespace VisualTemplates
                 boundObject = bindObjectProperty.GetValue(evt) as SerializedObject;
         }
 
-        public new class UxmlFactory : UxmlFactory<ContentPresenter, UxmlTraits>
+        public new class UxmlFactory : UxmlFactory<ContentPresenter, UxmlTraits> { }
+
+        public new class UxmlTraits : BindableElement.UxmlTraits
         {
-            UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
+            private UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
 
-            public override VisualElement Create(IUxmlAttributes bag, CreationContext cc)
+            public override void Init(VisualElement visualElement, IUxmlAttributes bag, CreationContext cc)
             {
-                var itemsControl = (ContentPresenter)base.Create(bag, cc);
+                base.Init(visualElement, bag, cc);
 
-                itemsControl.configMethodName = m_configMethod.GetValueFromBag(bag, cc);
+                var contentPresenter = (ContentPresenter)visualElement;
 
-                return itemsControl;
+                contentPresenter.ConfigMethod = m_configMethod.GetValueFromBag(bag, cc);
+            }
+
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
+            {
+                get { yield break; }
             }
         }
-
-        public new class UxmlTraits : BindableElement.UxmlTraits { }
     }
 }

@@ -1,6 +1,16 @@
+.local-to-world-content {
+    margin-left: -12px;
+    margin-top: 2px;
+    margin-right: -27px;
+}
 
+.component-label {
+    position: absolute;
+    margin-top: 2px;
+}
 
-#local-to-world-input {
-    padding-bottom: 2px;
-    padding-left: 2px;
+.unity-foldout {
+    margin-left: -3px;
+    margin-top: 0;
+    margin-bottom: 2px;
 }

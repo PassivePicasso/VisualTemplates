@@ -8,13 +8,60 @@ namespace VisualTemplates
 {
     public class TypeSuggestOptions : SuggestOptions
     {
-        private static Type[] AllTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes()).ToArray();
+        private static Type[] AllTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes()).Distinct().ToArray();
 
         private static Dictionary<string, IEnumerable<SuggestOption>> rootOnlyLookup = new Dictionary<string, IEnumerable<SuggestOption>>();
         private static Dictionary<string, IEnumerable<SuggestOption>> descendantIncludedLookup = new Dictionary<string, IEnumerable<SuggestOption>>();
+        private string types;
 
-        public override IEnumerable<SuggestOption> Options { get; protected set; }
+        public override IEnumerable<SuggestOption> Options
+        {
+            get
+            {
+                if (IncludeDescendants && descendantIncludedLookup.ContainsKey(Types)) return descendantIncludedLookup[Types];
+                else if (rootOnlyLookup.ContainsKey(Types)) return rootOnlyLookup[Types];
+                else return Array.Empty<SuggestOption>();
+            }
+        }
+
         public new class UxmlFactory : UxmlFactory<TypeSuggestOptions, UxmlTraits> { }
+
+        public string Types
+        {
+            get => types;
+            set
+            {
+                types = value;
+                UpdateCache();
+            }
+        }
+        public bool IncludeDescendants { get; set; }
+
+        private void UpdateCache()
+        {
+            var typeStrings = Types.Split(',');
+
+            if (IncludeDescendants)
+            {
+                if (!descendantIncludedLookup.ContainsKey(Types))
+                    descendantIncludedLookup[Types] = typeStrings
+                        .Select(ts => AllTypes.FirstOrDefault(t => t.FullName == ts))
+                        .Where(t => t != null && t.IsPublic /*&& !t.IsInterface*/)
+                        .SelectMany(t => AllTypes.Where(at => t.IsAssignableFrom(at)))
+                        .Where(t => !t.IsAbstract)
+                        .Select(at => new SuggestOption { DisplayName = at.Name, Data = at })
+                        .ToArray();
+            }
+            else
+            {
+                if (!rootOnlyLookup.ContainsKey(Types))
+                    rootOnlyLookup[Types] = typeStrings
+                        .Select(ts => AllTypes.FirstOrDefault(t => t.FullName == ts))
+                        .Where(t => t != null && t.IsPublic && !t.IsAbstract /*&& !t.IsInterface*/)
+                        .Select(at => new SuggestOption { DisplayName = at.Name, Data = at })
+                        .ToArray();
+            }
+        }
 
         public new class UxmlTraits : SuggestOptions.UxmlTraits
         {
@@ -26,36 +73,13 @@ namespace VisualTemplates
                 Profiler.BeginSample("CreateTypeSuggestOption");
                 base.Init(ve, bag, cc);
 
-                string typeString = m_types.GetValueFromBag(bag, cc);
-                bool includeDescendants = m_descendants.GetValueFromBag(bag, cc);
-                var typeStrings = typeString.Split(',');
-
-                if (includeDescendants)
-                {
-                    if (!descendantIncludedLookup.ContainsKey(typeString))
-                        descendantIncludedLookup[typeString] = typeStrings
-                            .Select(ts => AllTypes.FirstOrDefault(t => t.FullName == ts))
-                            .Where(t => t != null && t.IsPublic)
-                            .SelectMany(t => AllTypes.Where(at => t.IsAssignableFrom(at)))
-                            .Distinct()
-                            .Select(at => new SuggestOption { Name = at.Name, data = at })
-                            .ToArray();
-                }
-                else
-                {
-                    if (!rootOnlyLookup.ContainsKey(typeString))
-                        rootOnlyLookup[typeString] = typeStrings
-                            .Select(ts => AllTypes.FirstOrDefault(t => t.FullName == ts))
-                            .Where(t => t != null && t.IsPublic)
-                            .Select(at => new SuggestOption { Name = at.Name, data = at })
-                            .ToArray();
-                }
-
-                ((TypeSuggestOptions)ve).Options = includeDescendants ? descendantIncludedLookup[typeString] : rootOnlyLookup[typeString];
+                var tso = (TypeSuggestOptions)ve;
+                tso.IncludeDescendants = m_descendants.GetValueFromBag(bag, cc);
+                tso.Types = m_types.GetValueFromBag(bag, cc);
+                tso.UpdateCache();
 
                 Profiler.EndSample();
             }
-
 
             public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
             {

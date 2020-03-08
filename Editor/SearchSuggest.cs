@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -60,7 +61,7 @@ namespace VisualTemplates
 
         private EditorWindow popupWindow;
         private ListView optionList;
-        private TextField textEntry;
+        private ToolbarSearchField textEntry;
 
         private PropertyInfo ownerObjectProperty;
         private PropertyInfo screenPositionProperty;
@@ -77,7 +78,7 @@ namespace VisualTemplates
         {
             AddToClassList("search-suggest");
 
-            textEntry = new TextField { name = "search-suggest-input" };
+            textEntry = new ToolbarSearchField { name = "search-suggest-input" };
             MatchedSuggestOption = new List<SuggestOption>();
 
             ConfigureOptionList();
@@ -85,7 +86,7 @@ namespace VisualTemplates
 
             textEntry.style.flexGrow = 1;
 
-            matchingSuggestOptions = suggestOption => suggestOption.Name.ToLower().Contains(textEntry.text.ToLower());
+            matchingSuggestOptions = suggestOption => suggestOption.DisplayName.ToLower().Contains(textEntry.value.ToLower());
 
             RegisterCallback<AttachToPanelEvent>(OnAttached);
             RegisterCallback<DetachFromPanelEvent>(OnDetached);
@@ -121,7 +122,7 @@ namespace VisualTemplates
                     Label label = v as Label;
                     var suggestOption = (SuggestOption)optionList.itemsSource[i];
 
-                    label.text = suggestOption.Name;
+                    label.text = suggestOption.DisplayName;
                     label.userData = suggestOption;
                 };
                 optionList.selectionType = SelectionType.Single;
@@ -158,8 +159,8 @@ namespace VisualTemplates
 
         private void OnAttached(AttachToPanelEvent evt)
         {
-            ownerObjectProperty = panel.GetType().GetProperty("ownerObject");
-            ownerObject = ownerObjectProperty.GetValue(panel);
+            ownerObjectProperty = evt.destinationPanel.GetType().GetProperty("ownerObject");
+            ownerObject = ownerObjectProperty.GetValue(evt.destinationPanel);
 
             screenPositionProperty = ownerObject.GetType().GetProperty("screenPosition");
 
@@ -263,7 +264,7 @@ namespace VisualTemplates
             optionList.itemsSource = MatchedSuggestOption;
             optionList.selectedIndex = -1;
 
-            if (string.IsNullOrEmpty(textEntry.text))
+            if (string.IsNullOrEmpty(textEntry.value))
             {
                 optionList.Refresh();
                 return;

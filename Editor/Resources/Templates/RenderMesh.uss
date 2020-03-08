@@ -1,1 +1,21 @@
-RenderMesh {}
+.component-label {
+    position: absolute;
+    margin-top: 2px;
+}
+
+.unity-foldout {
+    margin-left: -3px;
+    margin-top: 0;
+    margin-bottom: 2px;
+}
+
+.render-mesh-content {
+    margin-left: -12px;
+    margin-right: -27px;
+    margin-top: 2px;
+}
+
+.layer-field {
+    margin-right: 3px;
+    margin-left: 3px;
+}
