@@ -11,19 +11,20 @@ namespace VisualTemplates
 {
     public class ContentPresenter : BindableElement
     {
+        private static Func<string, VisualTreeAsset> DefaultLoadAsset = typeName => Resources.Load<VisualTreeAsset>($@"Templates/{typeName}");
         private static readonly Type[] methodSignature = new[] { typeof(VisualElement) };
         private static readonly object[] methodDataArray = new object[1];
+
         private SerializedObject boundObject;
         private SerializedProperty boundProperty;
+        private VisualTreeAsset visualTreeAsset;
 
         public string ConfigMethod { get; set; }
-
-        private MethodInfo configMethod;
-        private VisualTreeAsset visualTreeAsset;
-        private AutoEditor editor;
-
+        public Func<string, VisualTreeAsset> LoadAsset;
+        public Action<VisualElement> Configure;
         public ContentPresenter()
         {
+            LoadAsset = DefaultLoadAsset;
             name = $"content-presenter";
             RegisterCallback<AttachToPanelEvent>(OnAttached);
         }
@@ -34,16 +35,10 @@ namespace VisualTemplates
             if (boundObject == null) return;
             Clear();
 
-            editor = (userData ?? FindAncestorUserData()) as AutoEditor;
-            if (editor != null && !string.IsNullOrEmpty(ConfigMethod) && configMethod == null)
-                configMethod = editor.GetType().GetMethod(ConfigMethod, methodSignature);
-
-            if (editor == null) return;
-
             string dataType = boundObject.targetObject.GetType().Name;
             boundProperty = GetProperty(boundObject);
 
-            if (boundProperty == null) visualTreeAsset = editor.LoadAsset(dataType);
+            if (boundProperty == null) visualTreeAsset = LoadAsset(dataType);
             else
             {
                 var property = boundProperty.Copy();
@@ -63,7 +58,7 @@ namespace VisualTemplates
                     VisualTreeAsset treeAsset = null;
                     while (treeAsset == null)
                     {
-                        treeAsset = editor.LoadAsset(parentType.Name);
+                        treeAsset = LoadAsset(parentType.Name);
                         if (treeAsset == null)
                         {
                             if (parentType.BaseType == null) break;
@@ -75,7 +70,7 @@ namespace VisualTemplates
                     if (treeAsset != null)
                     {
                         dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
-                        visualTreeAsset = editor.LoadAsset(dataType);
+                        visualTreeAsset = LoadAsset(dataType);
                     }
                 }
                 else
@@ -85,7 +80,7 @@ namespace VisualTemplates
 
                     dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
 
-                    visualTreeAsset = editor.LoadAsset(dataType);
+                    visualTreeAsset = LoadAsset(dataType);
                 }
             }
 
@@ -101,9 +96,24 @@ namespace VisualTemplates
 
             visualTreeAsset.CloneTree(this);
 
-            methodDataArray[0] = this;
+            if (Configure == null && !string.IsNullOrEmpty(ConfigMethod))
+            {
+                var ud = userData ?? FindAncestorUserData();
+                if (ud != null)
+                {
+                    var methodInfo = ud.GetType()
+                      .GetMethod(ConfigMethod, BindingFlags.Public | BindingFlags.Instance);
+                    //?.Invoke(ud, null);
+                    if (methodInfo != null)
+                    {
+                        var args = new[] { this };
+                        Configure = (visualElement) => methodInfo.Invoke(ud, args);
+                    }
+                }
+            }
 
-            configMethod?.Invoke(editor, methodDataArray);
+            Configure?.Invoke(this);
+
             if (typeof(UnityEngine.Object).IsAssignableFrom(boundObject.targetObject.GetType()))
                 this.Bind(boundObject);
         }

@@ -18,8 +18,12 @@ namespace VisualTemplates
         {
             get
             {
-                if (IncludeDescendants && descendantIncludedLookup.ContainsKey(Types)) return descendantIncludedLookup[Types];
-                else if (rootOnlyLookup.ContainsKey(Types)) return rootOnlyLookup[Types];
+                if (IncludeDescendants)
+                    return descendantIncludedLookup.Where(kvp => Types.Contains(kvp.Key)).SelectMany(kvp => kvp.Value);
+                
+                else if (rootOnlyLookup.ContainsKey(Types)) 
+                    return rootOnlyLookup.Where(kvp => Types.Contains(kvp.Key)).SelectMany(kvp => kvp.Value);
+
                 else return Array.Empty<SuggestOption>();
             }
         }
@@ -39,27 +43,34 @@ namespace VisualTemplates
 
         private void UpdateCache()
         {
-            var typeStrings = Types.Split(',');
+            var typeNames = Types.Split(',');
 
             if (IncludeDescendants)
             {
-                if (!descendantIncludedLookup.ContainsKey(Types))
-                    descendantIncludedLookup[Types] = typeStrings
-                        .Select(ts => AllTypes.FirstOrDefault(t => t.FullName == ts))
-                        .Where(t => t != null && t.IsPublic /*&& !t.IsInterface*/)
-                        .SelectMany(t => AllTypes.Where(at => t.IsAssignableFrom(at)))
-                        .Where(t => !t.IsAbstract)
-                        .Select(at => new SuggestOption { DisplayName = at.Name, Data = at })
-                        .ToArray();
+                foreach (var typeName in typeNames)
+                {
+                    if (descendantIncludedLookup.ContainsKey(typeName)) continue;
+
+                    var type = AllTypes.FirstOrDefault(t => t.IsPublic && t.FullName == typeName);
+                    if (type == null) continue;
+
+                    var assignables = AllTypes.Where(t => type.IsAssignableFrom(t) && !t.IsAbstract);
+                    var suggestOptions = assignables.Select(at => new SuggestOption { DisplayName = at.Name, Data = at });
+
+                    if (!type.IsAbstract)
+                        suggestOptions.Append(new SuggestOption { DisplayName = type.Name, Data = type });
+
+                    descendantIncludedLookup[typeName] = suggestOptions.ToArray();
+                }
             }
             else
             {
-                if (!rootOnlyLookup.ContainsKey(Types))
-                    rootOnlyLookup[Types] = typeStrings
-                        .Select(ts => AllTypes.FirstOrDefault(t => t.FullName == ts))
-                        .Where(t => t != null && t.IsPublic && !t.IsAbstract /*&& !t.IsInterface*/)
-                        .Select(at => new SuggestOption { DisplayName = at.Name, Data = at })
-                        .ToArray();
+                foreach (var typeName in typeNames)
+                {
+                    if (rootOnlyLookup.ContainsKey(typeName)) continue;
+                    var type = AllTypes.FirstOrDefault(t => t.FullName == typeName && t.IsPublic && !t.IsAbstract);
+                    rootOnlyLookup[typeName] = new[] { new SuggestOption { DisplayName = type.Name, Data = type } };
+                }
             }
         }
 

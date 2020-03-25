@@ -24,6 +24,7 @@ namespace VisualTemplates
 
         public virtual VisualTreeAsset LoadAsset(string typeName) => Resources.Load<VisualTreeAsset>($@"Templates/{typeName}");
 
-        public virtual ContentPresenter CreateContentPresenter() => new ContentPresenter() { userData = this };
+        public virtual ContentPresenter CreateContentPresenter() => new ContentPresenter() { userData = this, LoadAsset = LoadAsset };
     }
+
 }

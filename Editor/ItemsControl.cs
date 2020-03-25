@@ -88,10 +88,7 @@ namespace VisualTemplates
         {
             var boundArray = GetArray(boundObject);
             if (boundArray == null) return;
-            int arraySize = boundArray.arraySize;
-            boundArray.arraySize = arraySize + 1;
-            boundArray.InsertArrayElementAtIndex(arraySize);
-            var cdsp = boundArray.GetArrayElementAtIndex(arraySize);
+            var cdsp = boundArray.GetArrayElementAtIndex(boundArray.arraySize++);
 
             if (assignData != null)
                 assignData.Invoke(cdsp, data);
