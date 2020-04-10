@@ -1,15 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
+
+#if UNITY_2020
+using UnityEditor.UIElements;
+#elif UNITY_2018
+using UnityEditor.Experimental.UIElements;
+#endif
+#if UNITY_2020
 using UnityEngine.UIElements;
+#elif UNITY_2018
+using UnityEngine.Experimental.UIElements;
+#endif
 
 namespace VisualTemplates
 {
-    public class ContentPresenter : BindableElement
+    public partial class ContentPresenter : BindableElement
     {
         private static Func<string, VisualTreeAsset> DefaultLoadAsset = typeName => Resources.Load<VisualTreeAsset>($@"Templates/{typeName}");
         private static readonly Type[] methodSignature = new[] { typeof(VisualElement) };
@@ -46,6 +54,7 @@ namespace VisualTemplates
                 dataType = property.type.Substring(property.type.IndexOf(" ") + 1);
                 if (dataType?.StartsWith("managedReference") ?? false)
                 {
+#if UNITY_2020
                     var mrft = property.managedReferenceFullTypename;
                     var assemblyName = mrft.Substring(0, mrft.IndexOf(" "));
                     dataType = mrft.Substring(mrft.IndexOf(" ") + 1);
@@ -72,6 +81,7 @@ namespace VisualTemplates
                         dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
                         visualTreeAsset = LoadAsset(dataType);
                     }
+#endif
                 }
                 else
                 {
@@ -94,7 +104,11 @@ namespace VisualTemplates
                 return;
             }
 
+#if UNITY_2020
             visualTreeAsset.CloneTree(this);
+#elif UNITY_2018
+            visualTreeAsset.CloneTree(this, null);
+#endif
 
             if (Configure == null && !string.IsNullOrEmpty(ConfigMethod))
             {
@@ -124,7 +138,11 @@ namespace VisualTemplates
             var property = boundObject.FindProperty(bindingPath);
             if (property == null)
             {
+#if UNITY_2020
                 string propertyPath = this.GetBindingPath();
+#elif UNITY_2018
+                string propertyPath = this.bindingPath;
+#endif
                 property = boundObject.FindProperty($"{propertyPath}.{bindingPath}");
             }
 
@@ -141,27 +159,6 @@ namespace VisualTemplates
 
             if (boundObject == null)
                 boundObject = bindObjectProperty.GetValue(evt) as SerializedObject;
-        }
-
-        public new class UxmlFactory : UxmlFactory<ContentPresenter, UxmlTraits> { }
-
-        public new class UxmlTraits : BindableElement.UxmlTraits
-        {
-            private UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
-
-            public override void Init(VisualElement visualElement, IUxmlAttributes bag, CreationContext cc)
-            {
-                base.Init(visualElement, bag, cc);
-
-                var contentPresenter = (ContentPresenter)visualElement;
-
-                contentPresenter.ConfigMethod = m_configMethod.GetValueFromBag(bag, cc);
-            }
-
-            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
-            {
-                get { yield break; }
-            }
         }
     }
 }

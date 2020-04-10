@@ -1,8 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:Template name="Float3" src="Float/Float3.uxml" />
-    <ui:VisualElement name="translation">
-        <Style src="Translation.uss" />
-        <ui:Label text="Translation" name="field-label" />
-        <ui:Instance template="Float3" binding-path="Value" />
-    </ui:VisualElement>
-</ui:UXML>

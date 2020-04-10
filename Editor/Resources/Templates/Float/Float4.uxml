@@ -1,9 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:VisualElement name="Float4Field">
-        <Style src="Float4.uss" />
-        <uie:FloatField label="X" value="0" binding-path="x" />
-        <uie:FloatField label="Y" value="0" binding-path="y" />
-        <uie:FloatField label="Z" value="0" binding-path="z" />
-        <uie:FloatField label="W" value="0" binding-path="w" />
-    </ui:VisualElement>
-</ui:UXML>

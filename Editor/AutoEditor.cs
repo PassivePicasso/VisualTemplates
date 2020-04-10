@@ -1,7 +1,11 @@
-﻿using System;
+﻿#if UNITY_2020
+using System;
 using UnityEditor;
 using UnityEngine;
+
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
+
 
 namespace VisualTemplates
 {
@@ -28,3 +32,4 @@ namespace VisualTemplates
     }
 
 }
+#endif
