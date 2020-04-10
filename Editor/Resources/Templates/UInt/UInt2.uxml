@@ -1,7 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:VisualElement name="UInt2Field">
-        <Style src="UInt2.uss" />
-        <uie:IntegerField label="X" value="0" binding-path="x" />
-        <uie:IntegerField label="Y" value="0" binding-path="y" />
-    </ui:VisualElement>
-</ui:UXML>

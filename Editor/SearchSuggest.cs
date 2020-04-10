@@ -3,10 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
-using UnityEngine.UIElements;
 
+#if UNITY_2020
+using UnityEditor.UIElements;
+#elif UNITY_2018
+using UnityEditor.Experimental.UIElements;
+#endif
+#if UNITY_2020
+using UnityEngine.UIElements;
+#elif UNITY_2018
+using UnityEngine.Experimental.UIElements;
+#endif
 namespace VisualTemplates
 {
     public class SearchSuggest : VisualElement
@@ -99,7 +107,12 @@ namespace VisualTemplates
             if (popupWindow == null)
             {
                 popupWindow = ScriptableObject.CreateInstance<EditorWindow>();
-                popupWindow.rootVisualElement.hierarchy.Add(optionList);
+#if UNITY_2020
+                popupWindow.rootVisualElement.hierarchy
+#elif UNITY_2018
+                popupWindow.GetRootVisualContainer()
+#endif
+                    .Add(optionList);
             }
         }
 
@@ -132,8 +145,13 @@ namespace VisualTemplates
 
         private void OppahOptionStyle(VisualElement element)
         {
+#if UNITY_2020
             element.style.left = 0;
             element.style.right = 0;
+#elif UNITY_2018
+            element.style.positionLeft = 0;
+            element.style.positionRight = 0;
+#endif
             element.style.height = 100;
             element.style.backgroundColor = Color.Lerp(Color.gray, Color.white, 0.5f);
 
@@ -142,15 +160,26 @@ namespace VisualTemplates
             element.style.borderRightWidth =
             element.style.borderBottomWidth = 1;
 
+#if UNITY_2020
             element.style.borderTopColor =
             element.style.borderLeftColor =
             element.style.borderRightColor =
-            element.style.borderBottomColor = Color.Lerp(Color.gray, Color.black, 0.3f);
-        }
+            element.style.borderBottomColor 
+#elif UNITY_2018
+
+            element.style.borderColor
+#endif
+                = Color.Lerp(Color.gray, Color.black, 0.3f);
+        }  
 
         private void OnDetached(DetachFromPanelEvent evt)
         {
+
+#if UNITY_2020
             textEntry.UnregisterValueChangedCallback(OnTextChanged);
+#elif UNITY_2018
+            textEntry.RemoveOnValueChanged(OnTextChanged);
+#endif
             textEntry.UnregisterCallback<FocusOutEvent>(OnLostFocus);
             textEntry.UnregisterCallback<FocusInEvent>(OnGainedFocus);
 
@@ -176,7 +205,11 @@ namespace VisualTemplates
             SuggestOption = suggestOptions;
 
 
+#if UNITY_2020
             textEntry.RegisterValueChangedCallback(OnTextChanged);
+#elif UNITY_2018
+            textEntry.OnValueChanged(OnTextChanged);
+#endif
             textEntry.RegisterCallback<FocusOutEvent>(OnLostFocus);
             textEntry.RegisterCallback<FocusInEvent>(OnGainedFocus);
             textEntry.RegisterCallback<GeometryChangedEvent>(OnGeometryChange);
@@ -252,8 +285,15 @@ namespace VisualTemplates
             var topLeft = windowPosition.position + worldSpaceTextLayout.position;
             topLeft = new Vector2(topLeft.x - 3, topLeft.y + worldSpaceTextLayout.height);
             popupPosition = new Rect(topLeft, new Vector2(worldSpaceTextLayout.width, 100));
+
+
+#if UNITY_2020
             popupWindow.rootVisualElement.style.height = 100;
             popupWindow.rootVisualElement.style.width = worldSpaceTextLayout.width;
+#elif UNITY_2018
+            popupWindow.GetRootVisualContainer().style.height = 100;
+            popupWindow.GetRootVisualContainer().style.width = worldSpaceTextLayout.width;
+#endif
 
             popupWindow.position = popupPosition;
         }
