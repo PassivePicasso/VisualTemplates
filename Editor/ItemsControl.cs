@@ -4,15 +4,11 @@ using UnityEditor;
 
 #if UNITY_2020
 using UnityEditor.UIElements;
-#elif UNITY_2018
-using UnityEditor.Experimental.UIElements;
-#endif
-#if UNITY_2020
 using UnityEngine.UIElements;
 #elif UNITY_2018
+using UnityEditor.Experimental.UIElements;
 using UnityEngine.Experimental.UIElements;
 #endif
-
 
 namespace VisualTemplates
 {
@@ -20,6 +16,7 @@ namespace VisualTemplates
     {
         private SerializedObject boundObject;
 
+        public bool EnableDebug { get; set; }
         public string ConfigMethod { get; set; }
 
         public Func<SerializedProperty, bool> makeItem;
@@ -27,12 +24,9 @@ namespace VisualTemplates
         public ItemsControl()
         {
             name = $"content-presenter";
-            RegisterCallback<AttachToPanelEvent>(OnAttached);
         }
 
-        private void OnAttached(AttachToPanelEvent evt) => Reset();
-
-        private void Reset()
+        private void Reset(SerializedObject boundObject)
         {
             if (boundObject == null) return;
             Clear();
@@ -56,7 +50,7 @@ namespace VisualTemplates
             itemContainer.name = $"item-{childCount}";
             itemContainer.AddToClassList("items-control-item");
 
-            ContentPresenter contentPresenter = new ContentPresenter { bindingPath = property.propertyPath, ConfigMethod = ConfigMethod };
+            ContentPresenter contentPresenter = new ContentPresenter { bindingPath = property.propertyPath, ConfigMethod = ConfigMethod, EnableDebug = EnableDebug };
 
             void DeleteItem()
             {
@@ -118,21 +112,26 @@ namespace VisualTemplates
         {
             base.ExecuteDefaultActionAtTarget(evt);
 
-            var bindObjectProperty = evt.GetType().GetProperty("bindObject");
-            if (bindObjectProperty == null)
-                return;
-
-            if (boundObject == null)
+            switch (evt.GetType().Name)
             {
-                boundObject = bindObjectProperty.GetValue(evt) as SerializedObject;
-                //Reset();
+                case "SerializedPropertyBindEvent":
+                    break;
+                case "SerializedObjectBindEvent":
+                    var bindObjectProperty = evt.GetType().GetProperty("bindObject");
+                    Reset(bindObjectProperty.GetValue(evt) as SerializedObject);
+                    break;
+
+                default:
+                    break;
             }
+
         }
 
         public new class UxmlFactory : UxmlFactory<ItemsControl, UxmlTraits> { }
         public new class UxmlTraits : BindableElement.UxmlTraits
         {
             private UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
+            private UxmlBoolAttributeDescription m_enableDebug = new UxmlBoolAttributeDescription { name = "enable-debug", defaultValue = false };
 
             public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
             {
@@ -141,6 +140,7 @@ namespace VisualTemplates
                 var itemsControl = (ItemsControl)ve;
 
                 itemsControl.ConfigMethod = m_configMethod.GetValueFromBag(bag, cc);
+                itemsControl.EnableDebug = m_enableDebug.GetValueFromBag(bag, cc);
             }
 
             public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription

@@ -3,15 +3,13 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using System.Collections.Generic;
 
 #if UNITY_2020
 using UnityEditor.UIElements;
-#elif UNITY_2018
-using UnityEditor.Experimental.UIElements;
-#endif
-#if UNITY_2020
 using UnityEngine.UIElements;
 #elif UNITY_2018
+using UnityEditor.Experimental.UIElements;
 using UnityEngine.Experimental.UIElements;
 #endif
 
@@ -19,26 +17,48 @@ namespace VisualTemplates
 {
     public partial class ContentPresenter : BindableElement
     {
-        private static Func<string, VisualTreeAsset> DefaultLoadAsset = typeName => Resources.Load<VisualTreeAsset>($@"Templates/{typeName}");
-        private static readonly Type[] methodSignature = new[] { typeof(VisualElement) };
-        private static readonly object[] methodDataArray = new object[1];
+        public new class UxmlFactory : UxmlFactory<ContentPresenter, UxmlTraits> { }
 
-        private SerializedObject boundObject;
+        public new class UxmlTraits : BindableElement.UxmlTraits
+        {
+            private UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
+            private UxmlBoolAttributeDescription m_enableDebug = new UxmlBoolAttributeDescription { name = "enable-debug", defaultValue = false };
+
+            public override void Init(VisualElement visualElement, IUxmlAttributes bag, CreationContext cc)
+            {
+                base.Init(visualElement, bag, cc);
+
+                var contentPresenter = (ContentPresenter)visualElement;
+
+                contentPresenter.ConfigMethod = m_configMethod.GetValueFromBag(bag, cc);
+                contentPresenter.EnableDebug = m_enableDebug.GetValueFromBag(bag, cc);
+            }
+
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
+            {
+                get { yield break; }
+            }
+        }
+
+        public static Func<string, VisualTreeAsset> DefaultLoadAsset = typeName => Resources.Load<VisualTreeAsset>($@"Templates/{typeName}");
+
         private SerializedProperty boundProperty;
         private VisualTreeAsset visualTreeAsset;
 
+        public bool EnableDebug { get; set; }
         public string ConfigMethod { get; set; }
+
         public Func<string, VisualTreeAsset> LoadAsset;
+
         public Action<VisualElement> Configure;
+
         public ContentPresenter()
         {
             LoadAsset = DefaultLoadAsset;
             name = $"content-presenter";
-            RegisterCallback<AttachToPanelEvent>(OnAttached);
         }
-        private void OnAttached(AttachToPanelEvent evt) => Reset();
 
-        private void Reset()
+        private void Reset(SerializedObject boundObject)
         {
             if (boundObject == null) return;
             Clear();
@@ -97,10 +117,17 @@ namespace VisualTemplates
             if (visualTreeAsset == null)
             {
                 //in order to maintain our index we must add a visual element even if we don't find a template for the item.
-                Label error = new Label($"Template file not found: {dataType}.uxml");
+                Label error;
+
+                if (EnableDebug)
+                    error = new Label($"Template file not found: {dataType}.uxml");
+                else
+                    error = new Label(dataType);
+
                 error.AddToClassList("template-error");
 
                 Add(error);
+
                 return;
             }
 
@@ -108,6 +135,9 @@ namespace VisualTemplates
             visualTreeAsset.CloneTree(this);
 #elif UNITY_2018
             visualTreeAsset.CloneTree(this, null);
+
+            var path = AssetDatabase.GetAssetPath(visualTreeAsset).Replace(".uxml", ".uss");
+            AddStyleSheetPath(path);
 #endif
 
             if (Configure == null && !string.IsNullOrEmpty(ConfigMethod))
@@ -129,7 +159,10 @@ namespace VisualTemplates
             Configure?.Invoke(this);
 
             if (typeof(UnityEngine.Object).IsAssignableFrom(boundObject.targetObject.GetType()))
-                this.Bind(boundObject);
+            {
+                foreach (var child in Children())
+                    child.Bind(boundObject);
+            }
         }
 
         private SerializedProperty GetProperty(SerializedObject boundObject)
@@ -140,10 +173,9 @@ namespace VisualTemplates
             {
 #if UNITY_2020
                 string propertyPath = this.GetBindingPath();
-#elif UNITY_2018
-                string propertyPath = this.bindingPath;
-#endif
                 property = boundObject.FindProperty($"{propertyPath}.{bindingPath}");
+#elif UNITY_2018
+#endif
             }
 
             return property;
@@ -153,12 +185,20 @@ namespace VisualTemplates
         {
             base.ExecuteDefaultActionAtTarget(evt);
 
-            var bindObjectProperty = evt.GetType().GetProperty("bindObject");
-            if (bindObjectProperty == null)
-                return;
+            switch (evt.GetType().Name)
+            {
+                case "SerializedPropertyBindEvent":
+                    break;
+                case "SerializedObjectBindEvent":
+                    var bindObjectProperty = evt.GetType().GetProperty("bindObject");
+                    Reset(bindObjectProperty.GetValue(evt) as SerializedObject);
+                    break;
 
-            if (boundObject == null)
-                boundObject = bindObjectProperty.GetValue(evt) as SerializedObject;
+                default:
+                    break;
+            }
         }
+
+
     }
 }
