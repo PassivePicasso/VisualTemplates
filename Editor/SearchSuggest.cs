@@ -162,13 +162,13 @@ namespace VisualTemplates
             element.style.borderTopColor =
             element.style.borderLeftColor =
             element.style.borderRightColor =
-            element.style.borderBottomColor 
+            element.style.borderBottomColor
 #elif UNITY_2018
 
             element.style.borderColor
 #endif
                 = Color.Lerp(Color.gray, Color.black, 0.3f);
-        }  
+        }
 
         private void OnDetached(DetachFromPanelEvent evt)
         {
@@ -198,7 +198,8 @@ namespace VisualTemplates
             showValue = Enum.GetValues(showMode).GetValue((int)ShowMode.Tooltip);
             showValueArray = new[] { showValue, false };
 
-            var suggestOptions = Children().OfType<SuggestOptions>().SelectMany(sos => sos.Options).ToArray();
+            var suggestOptions = Children().OfType<SuggestOptions>().SelectMany(sos => sos.Options)
+                          .Union(Children().OfType<SuggestOption>()).ToArray();
 
             SuggestOption = suggestOptions;
 
