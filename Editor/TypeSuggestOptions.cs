@@ -76,6 +76,8 @@ namespace VisualTemplates
                 {
                     if (rootOnlyLookup.ContainsKey(typeName)) continue;
                     var type = AllTypes.FirstOrDefault(t => t.FullName == typeName && t.IsPublic && !t.IsAbstract);
+                    if (type == null) continue;
+
                     rootOnlyLookup[typeName] = new[] { new SuggestOption { DisplayName = type.Name, Data = type } };
                 }
             }
