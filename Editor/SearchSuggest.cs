@@ -44,6 +44,7 @@ namespace VisualTemplates
                 get
                 {
                     yield return new UxmlChildElementDescription(typeof(SuggestOption));
+                    yield return new UxmlChildElementDescription(typeof(SuggestOptions));
                 }
             }
 
@@ -180,6 +181,7 @@ namespace VisualTemplates
 #endif
             textEntry.UnregisterCallback<FocusOutEvent>(OnLostFocus);
             textEntry.UnregisterCallback<FocusInEvent>(OnGainedFocus);
+            textEntry.UnregisterCallback<KeyDownEvent>(OnKeyDown);
 
             Cleanup();
         }
