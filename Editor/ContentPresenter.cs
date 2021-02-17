@@ -4,8 +4,9 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
-#if UNITY_2020
+#if UNITY_2019_1_OR_NEWER
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 #elif UNITY_2018
@@ -15,12 +16,13 @@ using UnityEngine.Experimental.UIElements;
 
 namespace VisualTemplates
 {
-    public partial class ContentPresenter : BindableElement
+    public partial class ContentPresenter : VisualElement
     {
         public new class UxmlFactory : UxmlFactory<ContentPresenter, UxmlTraits> { }
 
-        public new class UxmlTraits : BindableElement.UxmlTraits
+        public new class UxmlTraits : VisualElement.UxmlTraits
         {
+            private UxmlStringAttributeDescription m_bindingPath = new UxmlStringAttributeDescription { name = "binding-path" };
             private UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
             private UxmlBoolAttributeDescription m_enableDebug = new UxmlBoolAttributeDescription { name = "enable-debug", defaultValue = false };
 
@@ -42,6 +44,8 @@ namespace VisualTemplates
 
         public static Func<string, VisualTreeAsset> DefaultLoadAsset = typeName => Resources.Load<VisualTreeAsset>($@"Templates/{typeName}");
 
+        public string bindingPath;
+
         private SerializedProperty boundProperty;
         private VisualTreeAsset visualTreeAsset;
 
@@ -52,6 +56,8 @@ namespace VisualTemplates
 
         public Action<VisualElement> Configure;
 
+        Regex reg_pptr = new Regex(".*PPtr<\\$(.*?)>", RegexOptions.Compiled);
+        Regex reg_managedReference = new Regex(".*managedReference.*", RegexOptions.Compiled);
         public ContentPresenter()
         {
             LoadAsset = DefaultLoadAsset;
@@ -66,16 +72,19 @@ namespace VisualTemplates
             string dataType = boundObject.targetObject.GetType().Name;
             boundProperty = GetProperty(boundObject);
 
-            if (boundProperty == null) visualTreeAsset = LoadAsset(dataType);
-            else
+            if (boundProperty != null)
             {
-                var property = boundProperty.Copy();
-
-                dataType = property.type.Substring(property.type.IndexOf(" ") + 1);
-                if (dataType?.StartsWith("managedReference") ?? false)
+                switch (boundProperty.propertyType)
                 {
-#if UNITY_2020
-                    var mrft = property.managedReferenceFullTypename;
+                    case SerializedPropertyType.ObjectReference:
+                        dataType = boundProperty.objectReferenceValue.GetType().Name;
+                        break;
+                    default:
+                        switch (boundProperty.type)
+                        {
+                            case var type when reg_managedReference.IsMatch(type):
+#if UNITY_2020_1_OR_NEWER
+                    var mrft = boundProperty.managedReferenceFullTypename;
                     var assemblyName = mrft.Substring(0, mrft.IndexOf(" "));
                     dataType = mrft.Substring(mrft.IndexOf(" ") + 1);
 
@@ -101,39 +110,33 @@ namespace VisualTemplates
                         dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
                         visualTreeAsset = LoadAsset(dataType);
                     }
+#elif UNITY_2018
 #endif
+                                break;
+                            default:
+                                if (dataType == null) break;
+                                dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
+                                break;
+                        }
+                        break;
                 }
-                else
-                {
-                    if (dataType == null)
-                        return;
 
-                    dataType = dataType.Substring(dataType.LastIndexOf('.') + 1);
-
-                    visualTreeAsset = LoadAsset(dataType);
-                }
             }
+            visualTreeAsset = LoadAsset(dataType);
 
             if (visualTreeAsset == null)
             {
                 //in order to maintain our index we must add a visual element even if we don't find a template for the item.
-                Label error;
-
-                if (EnableDebug)
-                    error = new Label($"Template file not found: {dataType}.uxml");
-                else
-                    error = new Label(dataType);
-
+                var error = new Label($"Template file not found: BoundType({boundObject.targetObject.GetType().FullName}) Template({dataType}.uxml)");
                 error.AddToClassList("template-error");
-
                 Add(error);
 
                 return;
             }
 
-#if UNITY_2020
+#if UNITY_2019_1_OR_NEWER
             visualTreeAsset.CloneTree(this);
-#elif UNITY_2018
+#elif UNITY_2018_1_OR_NEWER
             visualTreeAsset.CloneTree(this, null);
 
             var path = AssetDatabase.GetAssetPath(visualTreeAsset).Replace(".uxml", ".uss");
@@ -158,25 +161,17 @@ namespace VisualTemplates
 
             Configure?.Invoke(this);
 
-            if (typeof(UnityEngine.Object).IsAssignableFrom(boundObject.targetObject.GetType()))
-            {
-                foreach (var child in Children())
-                    child.Bind(boundObject);
-            }
         }
 
         private SerializedProperty GetProperty(SerializedObject boundObject)
         {
             if (bindingPath == null) return boundObject.FindProperty("");
             var property = boundObject.FindProperty(bindingPath);
-            if (property == null)
-            {
-#if UNITY_2020
-                string propertyPath = this.GetBindingPath();
-                property = boundObject.FindProperty($"{propertyPath}.{bindingPath}");
-#elif UNITY_2018
-#endif
-            }
+            //if (property == null)
+            //{
+            //    string propertyPath = this.GetBindingPath();
+            //    property = boundObject.FindProperty($"{propertyPath}.{bindingPath}");
+            //}
 
             return property;
         }
@@ -191,7 +186,10 @@ namespace VisualTemplates
                     break;
                 case "SerializedObjectBindEvent":
                     var bindObjectProperty = evt.GetType().GetProperty("bindObject");
-                    Reset(bindObjectProperty.GetValue(evt) as SerializedObject);
+                    var boundObject = bindObjectProperty.GetValue(evt) as SerializedObject;
+                    Reset(boundObject);
+                    if (typeof(UnityEngine.Object).IsAssignableFrom(boundObject.targetObject.GetType()))
+                        BindRecursive(this, boundObject);
                     break;
 
                 default:
@@ -199,6 +197,14 @@ namespace VisualTemplates
             }
         }
 
+        void BindRecursive(VisualElement element, SerializedObject boundObject)
+        {
+            foreach (var child in element.Children())
+            {
+                child.Bind(boundObject);
+                BindRecursive(child, boundObject);
+            }
+        }
 
     }
 }
