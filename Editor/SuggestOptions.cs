@@ -17,6 +17,23 @@ namespace VisualTemplates
 {
     public abstract class SuggestOptions : VisualElement
     {
-        public abstract IEnumerable<SuggestOption> Options { get; }
+        public virtual IEnumerable<SuggestOption> Options => Children().OfType<SuggestOption>();
+        public new class UxmlFactory : UxmlFactory<SuggestOptions, UxmlTraits> { }
+        public new class UxmlTraits : BindableElement.UxmlTraits
+        {
+            public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
+            {
+                base.Init(ve, bag, cc);
+            }
+
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
+            {
+                get
+                {
+                    yield return new UxmlChildElementDescription(typeof(SuggestOption));
+                    yield break;
+                }
+            }
+        }
     }
 }
