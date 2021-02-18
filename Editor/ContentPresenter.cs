@@ -139,8 +139,19 @@ namespace VisualTemplates
 #elif UNITY_2018_1_OR_NEWER
             visualTreeAsset.CloneTree(this, null);
 
-            var path = AssetDatabase.GetAssetPath(visualTreeAsset).Replace(".uxml", ".uss");
-            AddStyleSheetPath(path);
+            var ussPath = AssetDatabase.GetAssetPath(visualTreeAsset).Replace(".uxml", ".uss");
+            var ussDarkPath = ussPath.Replace(".uss", "_Dark.uss");
+            var ussLghtPath = ussPath.Replace(".uss", "_Light.uss");
+            var defaultSheet = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ussPath);
+            var darkSheet = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ussDarkPath);
+            var lghtSheet = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ussLghtPath);
+
+            if (defaultSheet) AddStyleSheetPath(ussPath);
+            
+            if (EditorGUIUtility.isProSkin && darkSheet)
+                AddStyleSheetPath(ussDarkPath);
+            else if (lghtSheet)
+                AddStyleSheetPath(ussLghtPath);
 #endif
 
             if (Configure == null && !string.IsNullOrEmpty(ConfigMethod))
