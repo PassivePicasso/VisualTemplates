@@ -31,6 +31,7 @@ namespace VisualTemplates
             if (boundObject == null) return;
             Clear();
 
+            this.boundObject = boundObject;
             var boundArray = GetArray(boundObject);
             if (boundArray == null) return;
 
