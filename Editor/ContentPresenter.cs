@@ -175,13 +175,16 @@ namespace VisualTemplates
                     if (methodInfo != null)
                     {
                         var args = new[] { this };
-                        Configure = (visualElement) => methodInfo.Invoke(ud, args);
+                        void Invoke(VisualElement visualElement) => methodInfo.Invoke(ud, args);
+                        Configure = Invoke;
                     }
                 }
             }
-
-            Configure?.Invoke(this);
-
+            try
+            {
+                Configure?.Invoke(this);
+            }
+            catch(Exception e) { Debug.LogError(e); }
         }
 
         private SerializedProperty GetProperty(SerializedObject boundObject)
