@@ -226,6 +226,8 @@ namespace VisualTemplates
             foreach (var child in element.Children())
             {
                 child.Bind(boundObject);
+                if (child is ContentPresenter) continue;
+                if (child is ItemsControl) continue;
                 BindRecursive(child, boundObject);
             }
         }
