@@ -18,6 +18,7 @@ namespace VisualTemplates
 
         public bool EnableDebug { get; set; }
         public string ConfigMethod { get; set; }
+        public string Template { get; set; }
 
         public Func<SerializedProperty, bool> makeItem;
 
@@ -51,7 +52,7 @@ namespace VisualTemplates
             itemContainer.name = $"item-{childCount}";
             itemContainer.AddToClassList("items-control-item");
 
-            ContentPresenter contentPresenter = new ContentPresenter { bindingPath = property.propertyPath, ConfigMethod = ConfigMethod, EnableDebug = EnableDebug };
+            ContentPresenter contentPresenter = new ContentPresenter { bindingPath = property.propertyPath, ConfigMethod = ConfigMethod, EnableDebug = EnableDebug, Template = Template };
 
             void DeleteItem()
             {
@@ -131,6 +132,7 @@ namespace VisualTemplates
         public new class UxmlFactory : UxmlFactory<ItemsControl, UxmlTraits> { }
         public new class UxmlTraits : BindableElement.UxmlTraits
         {
+            private UxmlStringAttributeDescription m_template = new UxmlStringAttributeDescription { name = "template" };
             private UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
             private UxmlBoolAttributeDescription m_enableDebug = new UxmlBoolAttributeDescription { name = "enable-debug", defaultValue = false };
 
@@ -142,6 +144,7 @@ namespace VisualTemplates
 
                 itemsControl.ConfigMethod = m_configMethod.GetValueFromBag(bag, cc);
                 itemsControl.EnableDebug = m_enableDebug.GetValueFromBag(bag, cc);
+                itemsControl.Template = m_template.GetValueFromBag(bag, cc);
             }
 
             public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
