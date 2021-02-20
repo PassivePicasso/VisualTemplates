@@ -184,7 +184,7 @@ namespace VisualTemplates
             {
                 Configure?.Invoke(this);
             }
-            catch(Exception e) { Debug.LogError(e); }
+            catch (Exception e) { Debug.LogError(e); }
         }
 
         private SerializedProperty GetProperty(SerializedObject boundObject)
@@ -212,8 +212,7 @@ namespace VisualTemplates
                     var bindObjectProperty = evt.GetType().GetProperty("bindObject");
                     var boundObject = bindObjectProperty.GetValue(evt) as SerializedObject;
                     Reset(boundObject);
-                    if (typeof(UnityEngine.Object).IsAssignableFrom(boundObject.targetObject.GetType()))
-                        BindRecursive(this, boundObject);
+                    BindRecursive(this, boundObject);
                     break;
 
                 default:
