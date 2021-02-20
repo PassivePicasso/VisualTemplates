@@ -191,11 +191,11 @@ namespace VisualTemplates
         {
             if (bindingPath == null) return boundObject.FindProperty("");
             var property = boundObject.FindProperty(bindingPath);
-            //if (property == null)
-            //{
-            //    string propertyPath = this.GetBindingPath();
-            //    property = boundObject.FindProperty($"{propertyPath}.{bindingPath}");
-            //}
+            if (property == null)
+            {
+                string propertyPath = this.GetBindingPath();
+                property = boundObject.FindProperty($"{propertyPath}.{bindingPath}");
+            }
 
             return property;
         }
