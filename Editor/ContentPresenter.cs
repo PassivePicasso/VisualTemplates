@@ -16,14 +16,13 @@ using UnityEngine.Experimental.UIElements;
 
 namespace VisualTemplates
 {
-    public partial class ContentPresenter : VisualElement
+    public partial class ContentPresenter : BindableElement
     {
         public new class UxmlFactory : UxmlFactory<ContentPresenter, UxmlTraits> { }
 
-        public new class UxmlTraits : VisualElement.UxmlTraits
+        public new class UxmlTraits : BindableElement.UxmlTraits
         {
             private UxmlStringAttributeDescription m_template = new UxmlStringAttributeDescription { name = "template" };
-            private UxmlStringAttributeDescription m_bindingPath = new UxmlStringAttributeDescription { name = "binding-path" };
             private UxmlStringAttributeDescription m_configMethod = new UxmlStringAttributeDescription { name = "config-method" };
             private UxmlBoolAttributeDescription m_enableDebug = new UxmlBoolAttributeDescription { name = "enable-debug", defaultValue = false };
 
@@ -45,8 +44,6 @@ namespace VisualTemplates
         }
 
         public static Func<string, VisualTreeAsset> DefaultLoadAsset = typeName => Resources.Load<VisualTreeAsset>($@"Templates/{typeName}");
-
-        public string bindingPath;
 
         private SerializedProperty boundProperty;
         private VisualTreeAsset visualTreeAsset;
@@ -212,24 +209,11 @@ namespace VisualTemplates
                     var bindObjectProperty = evt.GetType().GetProperty("bindObject");
                     var boundObject = bindObjectProperty.GetValue(evt) as SerializedObject;
                     Reset(boundObject);
-                    BindRecursive(this, boundObject);
                     break;
 
                 default:
                     break;
             }
         }
-
-        void BindRecursive(VisualElement element, SerializedObject boundObject)
-        {
-            foreach (var child in element.Children())
-            {
-                child.Bind(boundObject);
-                if (child is ContentPresenter) continue;
-                if (child is ItemsControl) continue;
-                BindRecursive(child, boundObject);
-            }
-        }
-
     }
 }
